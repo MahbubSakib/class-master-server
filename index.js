@@ -65,6 +65,40 @@ async function run() {
 
 
         // user
+        // find the user role
+        app.get('/users/role/:email', verifyToken, async (req, res) => {
+            const email = req.params.email;
+            if (email !== req.decoded.email) {
+                return res.status(403).send({ message: 'forbidden access' });
+            }
+
+            const query = { email: email };
+            const user = await userCollection.findOne(query);
+            if (!user) {
+                return res.status(404).send({ message: 'User not found' });
+            }
+
+            const role = user?.role; // 'admin', 'teacher', or 'student'
+            res.send({ role });
+        });
+
+
+        // find admin
+        app.get('/users/admin/:email', verifyToken, async (req, res) => {
+            const email = req.params.email;
+            if (email !== req.decoded.email) {
+                return res.status(403).send({ message: 'forbidden acces' })
+            }
+
+            const query = { email: email };
+            const user = await userCollection.findOne(query);
+            let admin = true;
+            if (user) {
+                admin = user?.role === 'admin'
+            }
+            res.send({ admin });
+        })
+
         // create an user
         app.post('/users', async (req, res) => {
             const user = req.body;
