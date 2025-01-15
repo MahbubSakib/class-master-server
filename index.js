@@ -1,6 +1,6 @@
 const express = require('express');
 const cors = require('cors');
-// const jwt = require('jsonwebtoken');
+const jwt = require('jsonwebtoken');
 const port = process.env.PORT || 5000;
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 require('dotenv').config();
@@ -24,9 +24,19 @@ const client = new MongoClient(uri, {
 
 async function run() {
   try {
+    const userCollection = client.db("classMasterDB").collection("users");
     // user
     // create an user
-    
+    app.post('/users', async (req, res) => {
+        const user = req.body;
+        const query = { email: user.email }
+        const existingUser = await userCollection.findOne(query)
+        if (existingUser) {
+            return res.send({ message: 'user already exist', insertedId: null })
+        }
+        const result = await userCollection.insertOne(user);
+        res.send(result);
+    })
     // Connect the client to the server	(optional starting in v4.7)
     await client.connect();
     // Send a ping to confirm a successful connection
