@@ -144,7 +144,6 @@ async function run() {
         app.post('/updateTeacherRequest/:id', async (req, res) => {
             const requestId = req.params.id;
             const { status } = req.body;
-
             try {
                 const requestUpdate = await teachOnClassMasterCollection.updateOne(
                     { _id: ObjectId(requestId) },
@@ -161,7 +160,6 @@ async function run() {
                         { $set: { role: 'teacher' } }
                     );
                 }
-
                 res.send({ message: 'Request updated successfully', requestUpdate });
             } catch (error) {
                 res.status(500).send({ message: 'Error updating teacher request' });
