@@ -25,6 +25,7 @@ const client = new MongoClient(uri, {
 async function run() {
     try {
         const userCollection = client.db("classMasterDB").collection("users");
+        const teachOnClassMasterCollection = client.db("classMasterDB").collection("teachOnClassMaster");
 
         // middlewares
         // verify jwt
@@ -110,8 +111,32 @@ async function run() {
             const result = await userCollection.insertOne(user);
             res.send(result);
         })
+
+        // teach on class master
+        app.post('/teachOnClassMaster', async (req, res) => {
+            const teachOnRequest = req.body;
+            const result = await teachOnClassMasterCollection.insertOne(teachOnRequest);
+            res.send(result);
+        })
+
+        // get user role for teach on class master page to see if the user is teacher or not
+        app.get('/userRole', async (req, res) => {
+            const {email} = req.query;
+            try{
+                const user = await userCollection.findOne({email});
+                if(user){
+                    res.send({role: user.role});
+                }else {
+                    res.status(404).send({ message: 'User not found'});
+                }
+            } catch (error){
+                res.status(500).send({ message: 'Error', error})
+            }
+        });
+
+
         // Connect the client to the server	(optional starting in v4.7)
-        await client.connect();
+        // await client.connect();
         // Send a ping to confirm a successful connection
         await client.db("admin").command({ ping: 1 });
         console.log("Pinged your deployment. You successfully connected to MongoDB!");
