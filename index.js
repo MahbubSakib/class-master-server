@@ -121,19 +121,52 @@ async function run() {
 
         // get user role for teach on class master page to see if the user is teacher or not
         app.get('/userRole', async (req, res) => {
-            const {email} = req.query;
-            try{
-                const user = await userCollection.findOne({email});
-                if(user){
-                    res.send({role: user.role});
-                }else {
-                    res.status(404).send({ message: 'User not found'});
+            const { email } = req.query;
+            try {
+                const user = await userCollection.findOne({ email });
+                if (user) {
+                    res.send({ role: user.role });
+                } else {
+                    res.status(404).send({ message: 'User not found' });
                 }
-            } catch (error){
-                res.status(500).send({ message: 'Error', error})
+            } catch (error) {
+                res.status(500).send({ message: 'Error', error })
             }
         });
 
+        // get teacher's pending request
+        app.get('/teachersRequest', async (req, res) => {
+            const requests = await teachOnClassMasterCollection.find().toArray();
+            res.send(requests);
+        })
+
+        // update the status of a teacher request
+        app.post('/updateTeacherRequest/:id', async (req, res) => {
+            const requestId = req.params.id;
+            const { status } = req.body;
+
+            try {
+                const requestUpdate = await teachOnClassMasterCollection.updateOne(
+                    { _id: ObjectId(requestId) },
+                    { $set: { status } }
+                );
+
+                if (status === 'accepted') {
+                    // Update the user role to 'teacher'
+                    const request = await teachOnClassMasterCollection.findOne({ _id: ObjectId(requestId) });
+                    const userEmail = request.email;
+
+                    await usersCollection.updateOne(
+                        { email: userEmail },
+                        { $set: { role: 'teacher' } }
+                    );
+                }
+
+                res.send({ message: 'Request updated successfully', requestUpdate });
+            } catch (error) {
+                res.status(500).send({ message: 'Error updating teacher request' });
+            }
+        });
 
         // Connect the client to the server	(optional starting in v4.7)
         // await client.connect();
