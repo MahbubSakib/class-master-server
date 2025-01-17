@@ -67,8 +67,25 @@ async function run() {
 
         // user
         // get all usersfor admin dashboard
-        
+        app.get('/users', verifyToken, verifyAdmin, async (req, res) => {
+            // console.log(req.headers);
+            const result = await userCollection.find().toArray();
+            res.send(result);
+        })
 
+        // make an user admin
+        app.patch('/users/admin/:id', async (req, res) => {
+            const id = req.params.id;
+            const filter = { _id: new ObjectId(id) };
+            const updatedDoc = {
+                $set: {
+                    role: 'admin'
+                }
+            }
+            const result = await userCollection.updateOne(filter, updatedDoc);
+            res.send(result);
+        })
+        
         // find the user role
         app.get('/users/role/:email', verifyToken, async (req, res) => {
             const email = req.params.email;
