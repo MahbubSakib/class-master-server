@@ -88,6 +88,31 @@ async function run() {
             }
         });
 
+        // get specific users profile
+        app.get('/user-profile', verifyToken, async (req, res) => {
+            try {
+                const userEmail = req.query.email || req.user?.email; // Fetch from query if not available in token
+                if (!userEmail) {
+                    return res.status(400).send({ message: 'Email is required to fetch user profile.' });
+                }
+
+                const user = await userCollection.findOne(
+                    { email: userEmail },
+                    { projection: { name: 1, role: 1, email: 1, phone: 1, photo: 1 } } // Only fetch required fields
+                );
+
+                if (!user) {
+                    return res.status(404).send({ message: 'User not found.' });
+                }
+
+                res.send(user);
+            } catch (error) {
+                console.error('Error fetching user profile:', error);
+                res.status(500).send({ message: 'Error fetching user profile.' });
+            }
+        });
+
+
 
         // make an user admin
         app.patch('/users/admin/:id', async (req, res) => {
