@@ -68,10 +68,26 @@ async function run() {
         // user
         // get all usersfor admin dashboard
         app.get('/users', verifyToken, verifyAdmin, async (req, res) => {
-            // console.log(req.headers);
-            const result = await userCollection.find().toArray();
-            res.send(result);
-        })
+            try {
+                const { name, email } = req.query; // Capture query parameters
+                const filter = {};
+
+                // Apply filters if provided
+                if (name) {
+                    filter.name = { $regex: name, $options: 'i' }; // Case-insensitive regex for name
+                }
+                if (email) {
+                    filter.email = { $regex: email, $options: 'i' }; // Case-insensitive regex for email
+                }
+
+                const result = await userCollection.find(filter).toArray();
+                res.send(result);
+            } catch (error) {
+                console.error('Error fetching users:', error);
+                res.status(500).send({ message: 'Error fetching users' });
+            }
+        });
+
 
         // make an user admin
         app.patch('/users/admin/:id', async (req, res) => {
@@ -85,7 +101,7 @@ async function run() {
             const result = await userCollection.updateOne(filter, updatedDoc);
             res.send(result);
         })
-        
+
         // find the user role
         app.get('/users/role/:email', verifyToken, async (req, res) => {
             const email = req.params.email;
@@ -189,31 +205,31 @@ async function run() {
         app.post('/updateTeacherRequest/:id', async (req, res) => {
             const requestId = req.params.id;
             const { status } = req.body;
-        
+
             try {
                 const requestUpdate = await teachOnClassMasterCollection.updateOne(
                     { _id: new ObjectId(requestId) },
                     { $set: { status } }
                 );
-        
+
                 if (status === 'accepted') {
                     const request = await teachOnClassMasterCollection.findOne({ _id: new ObjectId(requestId) });
                     const userEmail = request.email.trim();
-        
+
                     // Update user role in userCollection
                     await userCollection.updateOne(
                         { email: { $regex: `^${userEmail}$`, $options: 'i' } },
                         { $set: { role: 'teacher' } }
                     );
                 }
-        
+
                 res.send({ message: 'Request updated successfully', requestUpdate });
             } catch (error) {
                 console.error('Error updating request:', error);
                 res.status(500).send({ message: 'Error updating request' });
             }
         });
-        
+
 
 
         // Connect the client to the server	(optional starting in v4.7)
