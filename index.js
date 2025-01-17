@@ -66,6 +66,9 @@ async function run() {
 
 
         // user
+        // get all usersfor admin dashboard
+        
+
         // find the user role
         app.get('/users/role/:email', verifyToken, async (req, res) => {
             const email = req.params.email;
@@ -114,10 +117,30 @@ async function run() {
 
         // teach on class master
         app.post('/teachOnClassMaster', async (req, res) => {
-            const teachOnRequest = req.body;
-            const result = await teachOnClassMasterCollection.insertOne(teachOnRequest);
-            res.send(result);
-        })
+            const { email } = req.body;
+
+            try {
+                // Check if a request already exists for the user
+                const existingRequest = await teachOnClassMasterCollection.findOne({ email });
+
+                if (existingRequest) {
+                    // Update the existing request status to pending
+                    const updateResult = await teachOnClassMasterCollection.updateOne(
+                        { email },
+                        { $set: { ...req.body, status: 'pending' } }
+                    );
+                    return res.send({ message: 'Request updated successfully', updateResult });
+                }
+
+                // If no request exists, insert a new one
+                const insertResult = await teachOnClassMasterCollection.insertOne(req.body);
+                res.send({ message: 'Request created successfully', insertResult });
+            } catch (error) {
+                console.error('Error creating/updating request:', error);
+                res.status(500).send({ message: 'Error creating/updating request' });
+            }
+        });
+
 
         // get user role for teach on class master page to see if the user is teacher or not
         app.get('/userRole', async (req, res) => {
@@ -136,35 +159,45 @@ async function run() {
 
         // get teacher's pending request
         app.get('/teachersRequest', async (req, res) => {
-            const requests = await teachOnClassMasterCollection.find().toArray();
-            res.send(requests);
-        })
+            const { email } = req.query;
+            try {
+                const requests = await teachOnClassMasterCollection.find(email ? { email } : {}).toArray();
+                res.send(requests);
+            } catch (error) {
+                res.status(500).send({ message: 'Error fetching requests', error });
+            }
+        });
 
-        // update the status of a teacher request
+        // update the role of a teacher
         app.post('/updateTeacherRequest/:id', async (req, res) => {
             const requestId = req.params.id;
             const { status } = req.body;
+        
             try {
                 const requestUpdate = await teachOnClassMasterCollection.updateOne(
-                    { _id: ObjectId(requestId) },
+                    { _id: new ObjectId(requestId) },
                     { $set: { status } }
                 );
-
+        
                 if (status === 'accepted') {
-                    // Update the user role to 'teacher'
-                    const request = await teachOnClassMasterCollection.findOne({ _id: ObjectId(requestId) });
-                    const userEmail = request.email;
-
-                    await usersCollection.updateOne(
-                        { email: userEmail },
+                    const request = await teachOnClassMasterCollection.findOne({ _id: new ObjectId(requestId) });
+                    const userEmail = request.email.trim();
+        
+                    // Update user role in userCollection
+                    await userCollection.updateOne(
+                        { email: { $regex: `^${userEmail}$`, $options: 'i' } },
                         { $set: { role: 'teacher' } }
                     );
                 }
+        
                 res.send({ message: 'Request updated successfully', requestUpdate });
             } catch (error) {
-                res.status(500).send({ message: 'Error updating teacher request' });
+                console.error('Error updating request:', error);
+                res.status(500).send({ message: 'Error updating request' });
             }
         });
+        
+
 
         // Connect the client to the server	(optional starting in v4.7)
         // await client.connect();
