@@ -26,6 +26,7 @@ async function run() {
     try {
         const userCollection = client.db("classMasterDB").collection("users");
         const teachOnClassMasterCollection = client.db("classMasterDB").collection("teachOnClassMaster");
+        const classCollection = client.db("classMasterDB").collection("class");
 
         // middlewares
         // verify jwt
@@ -254,6 +255,22 @@ async function run() {
                 res.status(500).send({ message: 'Error updating request' });
             }
         });
+
+
+
+        // class -------------------------
+        // get class
+        app.get('/class', async (req,res)=>{
+            const result = await classCollection.find().toArray();
+            res.send(result);
+        })
+
+        // create or add a class
+        app.post('/class', async(req,res)=>{
+            const item = req.body;
+            const result = await classCollection.insertOne(item);
+            res.send(result);
+        })
 
 
 
