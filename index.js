@@ -259,18 +259,48 @@ async function run() {
 
 
         // class -------------------------
-        // get class
-        app.get('/class', async (req,res)=>{
+        // get all classes
+        app.get('/myClass', async (req, res) => {
             const result = await classCollection.find().toArray();
             res.send(result);
         })
 
         // create or add a class
-        app.post('/class', async(req,res)=>{
+        app.post('/class', async (req, res) => {
             const item = req.body;
             const result = await classCollection.insertOne(item);
             res.send(result);
         })
+
+        // update class by ID
+        app.patch('/update-class/:id', async (req, res) => {
+            const id = req.params.id;
+            const updatedClass = req.body;
+            const filter = { _id: new ObjectId(id) };
+            const updateDoc = { $set: updatedClass };
+
+            try {
+                const result = await classCollection.updateOne(filter, updateDoc);
+                res.send(result);
+            } catch (error) {
+                res.status(500).send({ message: 'Failed to update class' });
+            }
+        });
+
+        // delete a class
+        app.delete('/delete-class/:id', async (req, res) => {
+            const id = req.params.id;
+            const filter = { _id: new ObjectId(id) };
+
+            try {
+                const result = await classCollection.deleteOne(filter);
+                res.send(result);
+            } catch (error) {
+                res.status(500).send({ message: 'Failed to delete class' });
+            }
+        });
+
+
 
 
 
