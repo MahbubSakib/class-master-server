@@ -259,9 +259,14 @@ async function run() {
 
 
         // class -------------------------
-        // get all classes
+        // get all classes in admin dashboard
         app.get('/allClass', async (req, res) => {
             const result = await classCollection.find().toArray();
+            res.send(result);
+        })
+
+        app.get('/allApprovedClasses', async(req,res)=>{
+            const result = await classCollection.find({status: 'approved'}).toArray();
             res.send(result);
         })
 
