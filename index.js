@@ -27,6 +27,8 @@ async function run() {
         const userCollection = client.db("classMasterDB").collection("users");
         const teachOnClassMasterCollection = client.db("classMasterDB").collection("teachOnClassMaster");
         const classCollection = client.db("classMasterDB").collection("class");
+        const assignmentCollection = client.db("classMasterDB").collection("assignment");
+        const submissionCollection = client.db("classMasterDB").collection("submission");
 
         // middlewares
         // verify jwt
@@ -265,8 +267,8 @@ async function run() {
             res.send(result);
         })
 
-        app.get('/allApprovedClasses', async(req,res)=>{
-            const result = await classCollection.find({status: 'approved'}).toArray();
+        app.get('/allApprovedClasses', async (req, res) => {
+            const result = await classCollection.find({ status: 'approved' }).toArray();
             res.send(result);
         })
 
@@ -278,6 +280,50 @@ async function run() {
                 res.send(result);
             } catch (error) {
                 res.status(500).send({ message: 'Error fetching classes', error });
+            }
+        });
+
+        // get class details by id
+        app.get('/class/:id', async (req, res) => {
+            const id = req.params.id;
+            try {
+                const result = await classCollection.findOne({ _id: new ObjectId(id) });
+                res.send(result);
+            } catch (error) {
+                res.status(500).send({ message: 'Error fetching class details', error });
+            }
+        });
+
+        // create an assignment
+        app.post('/assignment', async (req, res) => {
+            const assignment = req.body;
+            try {
+                const result = await assignmentCollection.insertOne(assignment);
+                res.send(result);
+            } catch (error) {
+                res.status(500).send({ message: 'Error adding assignment', error });
+            }
+        });
+
+        // fetch assignment for a class
+        app.get('/assignments/:classId', async (req, res) => {
+            const classId = req.params.classId;
+            try {
+                const result = await assignmentCollection.find({ classId }).toArray();
+                res.send(result);
+            } catch (error) {
+                res.status(500).send({ message: 'Error fetching assignments', error });
+            }
+        });
+
+        // fetch total submission
+        app.get('/submissions/:classId', async (req, res) => {
+            const classId = req.params.classId;
+            try {
+                const result = await submissionCollection.countDocuments({ classId });
+                res.send({ totalSubmissions: result });
+            } catch (error) {
+                res.status(500).send({ message: 'Error fetching submissions', error });
             }
         });
 
