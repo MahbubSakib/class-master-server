@@ -260,10 +260,40 @@ async function run() {
 
         // class -------------------------
         // get all classes
-        app.get('/myClass', async (req, res) => {
+        app.get('/allClass', async (req, res) => {
             const result = await classCollection.find().toArray();
             res.send(result);
         })
+
+        // get my classes
+        app.get('/myClass', async (req, res) => {
+            const email = req.query.email; // Get the email from the query parameters
+            try {
+                const result = await classCollection.find({ email: email }).toArray();
+                res.send(result);
+            } catch (error) {
+                res.status(500).send({ message: 'Error fetching classes', error });
+            }
+        });
+
+        // Update class status -- admin page
+        app.patch('/updateClassStatus/:id', async (req, res) => {
+            const id = req.params.id;
+            const { status } = req.body;
+
+            try {
+                const filter = { _id: new ObjectId(id) };
+                const updateDoc = {
+                    $set: { status: status },
+                };
+
+                const result = await classCollection.updateOne(filter, updateDoc);
+                res.send(result);
+            } catch (error) {
+                res.status(500).send({ message: 'Error updating class status', error });
+            }
+        });
+
 
         // create or add a class
         app.post('/class', async (req, res) => {
