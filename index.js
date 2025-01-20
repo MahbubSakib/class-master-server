@@ -30,6 +30,8 @@ async function run() {
         const classCollection = client.db("classMasterDB").collection("class");
         const assignmentCollection = client.db("classMasterDB").collection("assignment");
         const submissionCollection = client.db("classMasterDB").collection("submission");
+        const paymentCollection = client.db("classMasterDB").collection("payment");
+        const enrollmentCollection = client.db("classMasterDB").collection("enrollment");
 
         // middlewares
         // verify jwt
@@ -383,21 +385,68 @@ async function run() {
         });
 
         // payment intent
-        app.post('/create-payment-intent', async(req,res)=>{
-            const {price} = req.body;
-            const amount = parseInt(price * 100);
+        app.post('/create-payment-intent', async (req, res) => {
+            try {
+                console.log('Raw price value:', req.body.price);
+                const { price } = req.body;
+                if (!price || isNaN(price)) {
+                    throw new Error('Invalid price value');
+                }
+                const amount = parseInt(price * 100);
+                console.log(amount, 'inside server');
+        
+                const paymentIntent = await stripe.paymentIntents.create({
+                    amount: amount,
+                    currency: 'usd',
+                    payment_method_types: ['card']
+                });
+        
+                res.send({
+                    clientSecret: paymentIntent.client_secret
+                });
+            } catch (error) {
+                console.error('Error creating payment intent:', error);
+                res.status(500).send({ error: 'Failed to create payment intent' });
+            }
+        });
+        
 
-            console.log(amount, 'inside server');
-            const paymentIntent = await stripe.paymentIntents.create({
-                amount: amount,
-                currency: 'usd',
-                payment_method_types: ['card']
-            });
 
-            res.send({
-                clientSecret: paymentIntent.client_secret
-            })
-        })
+        // save payment and save enrollment
+        app.post('/save-payment', async (req, res) => {
+            const { transactionId, email, classId, className, price } = req.body;
+
+            try {
+                // Store payment details in a new table or collection
+                const paymentInfo = {
+                    transactionId,
+                    email,
+                    classId,
+                    className,
+                    price,
+                    paymentDate: new Date(),
+                };
+                const paymentResult = await paymentCollection.insertOne(paymentInfo);
+
+                // Update enrollment details
+                const enrollmentInfo = {
+                    email,
+                    classId,
+                    enrollmentDate: new Date(),
+                };
+                const enrollmentResult = await enrollmentCollection.insertOne(enrollmentInfo);
+
+                res.send({
+                    success: true,
+                    message: "Payment and enrollment information saved successfully.",
+                    paymentResult,
+                    enrollmentResult,
+                });
+            } catch (error) {
+                res.status(500).send({ success: false, message: "Error saving data.", error });
+            }
+        });
+
 
 
 
