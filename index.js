@@ -394,13 +394,13 @@ async function run() {
                 }
                 const amount = parseInt(price * 100);
                 console.log(amount, 'inside server');
-        
+
                 const paymentIntent = await stripe.paymentIntents.create({
                     amount: amount,
                     currency: 'usd',
                     payment_method_types: ['card']
                 });
-        
+
                 res.send({
                     clientSecret: paymentIntent.client_secret
                 });
@@ -409,7 +409,26 @@ async function run() {
                 res.status(500).send({ error: 'Failed to create payment intent' });
             }
         });
-        
+
+        // my enroll classes
+        app.get('/my-enroll-classes', async (req, res) => {
+            const { email } = req.query;
+
+            try {
+                // Fetch enrollment records
+                const enrollments = await enrollmentCollection.find({ email }).toArray();
+                const classIds = enrollments.map(enroll => new ObjectId(enroll.classId));
+
+                // Fetch class details based on enrollment records
+                const classes = await classCollection.find({ _id: { $in: classIds } }).toArray();
+
+                res.send(classes);
+            } catch (error) {
+                res.status(500).send({ message: 'Error fetching enrolled classes.', error });
+            }
+        });
+
+
 
 
         // save payment and save enrollment
