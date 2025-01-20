@@ -4,6 +4,7 @@ const jwt = require('jsonwebtoken');
 const port = process.env.PORT || 5000;
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 require('dotenv').config();
+const stripe = require('stripe')(process.env.STRIP_SECRET_KEY)
 
 const app = express();
 
@@ -380,6 +381,23 @@ async function run() {
                 res.status(500).send({ message: 'Failed to delete class' });
             }
         });
+
+        // payment intent
+        app.post('/create-payment-intent', async(req,res)=>{
+            const {price} = req.body;
+            const amount = parseInt(price * 100);
+
+            console.log(amount, 'inside server');
+            const paymentIntent = await stripe.paymentIntents.create({
+                amount: amount,
+                currency: 'usd',
+                payment_method_types: ['card']
+            });
+
+            res.send({
+                clientSecret: paymentIntent.client_secret
+            })
+        })
 
 
 
