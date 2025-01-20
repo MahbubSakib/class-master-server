@@ -467,6 +467,64 @@ async function run() {
         });
 
 
+        // get assignment
+        app.get('/assignments/:classId', async (req, res) => {
+            const { classId } = req.params;
+
+            try {
+                const assignments = await assignmentCollection.find({ classId }).toArray();
+                res.send(assignments);
+            } catch (error) {
+                res.status(500).send({ message: 'Error fetching assignments.', error });
+            }
+        });
+
+        // submit assignments
+        app.post('/submit-assignment', async (req, res) => {
+            const { assignmentId, studentEmail, submissionData } = req.body;
+
+            try {
+                // Save the submission
+                const result = await submissionCollection.insertOne({
+                    assignmentId,
+                    studentEmail,
+                    submissionData,
+                    date: new Date(),
+                });
+
+                // Increment the submission count
+                await assignmentCollection.updateOne(
+                    { _id: new ObjectId(assignmentId) },
+                    { $inc: { submissionCount: 1 } }
+                );
+
+                res.send({ message: 'Assignment submitted successfully', result });
+            } catch (error) {
+                res.status(500).send({ message: 'Error submitting assignment.', error });
+            }
+        });
+
+        // Teaching Evaluation Report create
+        app.post('/submit-evaluation', async (req, res) => {
+            const { classId, studentEmail, description, rating } = req.body;
+
+            try {
+                const result = await evaluationCollection.insertOne({
+                    classId,
+                    studentEmail,
+                    description,
+                    rating,
+                    date: new Date(),
+                });
+
+                res.send({ message: 'Evaluation submitted successfully', result });
+            } catch (error) {
+                res.status(500).send({ message: 'Error submitting evaluation.', error });
+            }
+        });
+
+
+
 
 
 
