@@ -32,6 +32,7 @@ async function run() {
         const submissionCollection = client.db("classMasterDB").collection("submission");
         const paymentCollection = client.db("classMasterDB").collection("payment");
         const enrollmentCollection = client.db("classMasterDB").collection("enrollment");
+        const evaluationCollection = client.db("classMasterDB").collection("evaluation");
 
         // middlewares
         // verify jwt
@@ -493,16 +494,26 @@ async function run() {
                 });
 
                 // Increment the submission count
-                await assignmentCollection.updateOne(
+                const updateResult = await assignmentCollection.updateOne(
                     { _id: new ObjectId(assignmentId) },
                     { $inc: { submissionCount: 1 } }
                 );
 
-                res.send({ message: 'Assignment submitted successfully', result });
+                if (result.insertedId) {
+                    res.send({
+                        message: 'Assignment submitted successfully',
+                        insertedId: result.insertedId,
+                        updateResult,
+                    });
+                } else {
+                    throw new Error('Failed to insert submission.');
+                }
             } catch (error) {
-                res.status(500).send({ message: 'Error submitting assignment.', error });
+                console.error(error);
+                res.status(500).send({ message: 'Error submitting assignment.', error: error.message });
             }
         });
+
 
         // Teaching Evaluation Report create
         app.post('/submit-evaluation', async (req, res) => {
@@ -517,11 +528,20 @@ async function run() {
                     date: new Date(),
                 });
 
-                res.send({ message: 'Evaluation submitted successfully', result });
+                if (result.insertedId) {
+                    res.send({
+                        message: 'Evaluation submitted successfully',
+                        insertedId: result.insertedId,
+                    });
+                } else {
+                    throw new Error('Failed to insert evaluation.');
+                }
             } catch (error) {
-                res.status(500).send({ message: 'Error submitting evaluation.', error });
+                console.error(error);
+                res.status(500).send({ message: 'Error submitting evaluation.', error: error.message });
             }
         });
+
 
 
 
