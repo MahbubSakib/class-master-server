@@ -76,15 +76,15 @@ async function run() {
         // get all usersfor admin dashboard
         app.get('/users', verifyToken, verifyAdmin, async (req, res) => {
             try {
-                const { name, email } = req.query; // Capture query parameters
+                const { name, email } = req.query;
                 const filter = {};
 
                 // Apply filters if provided
                 if (name) {
-                    filter.name = { $regex: name, $options: 'i' }; // Case-insensitive regex for name
+                    filter.name = { $regex: name, $options: 'i' };
                 }
                 if (email) {
-                    filter.email = { $regex: email, $options: 'i' }; // Case-insensitive regex for email
+                    filter.email = { $regex: email, $options: 'i' };
                 }
 
                 const result = await userCollection.find(filter).toArray();
@@ -98,14 +98,14 @@ async function run() {
         // get specific users profile
         app.get('/user-profile', verifyToken, async (req, res) => {
             try {
-                const userEmail = req.query.email || req.user?.email; // Fetch from query if not available in token
+                const userEmail = req.query.email || req.user?.email;
                 if (!userEmail) {
                     return res.status(400).send({ message: 'Email is required to fetch user profile.' });
                 }
 
                 const user = await userCollection.findOne(
                     { email: userEmail },
-                    { projection: { name: 1, role: 1, email: 1, phone: 1, photo: 1 } } // Only fetch required fields
+                    { projection: { name: 1, role: 1, email: 1, phone: 1, photo: 1 } }
                 );
 
                 if (!user) {
@@ -291,8 +291,12 @@ async function run() {
         app.get('/class/:id', async (req, res) => {
             const id = req.params.id;
             try {
-                const result = await classCollection.findOne({ _id: new ObjectId(id) });
-                res.send(result);
+                const classDetails = await classCollection.findOne({ _id: new ObjectId(id) });
+
+                // Count total enrollments for this class
+                const totalEnrollment = await enrollmentCollection.countDocuments({ classId: id });
+
+                res.send({ ...classDetails, totalEnrollment });
             } catch (error) {
                 res.status(500).send({ message: 'Error fetching class details', error });
             }
@@ -324,12 +328,21 @@ async function run() {
         app.get('/submissions/:classId', async (req, res) => {
             const classId = req.params.classId;
             try {
-                const result = await submissionCollection.countDocuments({ classId });
-                res.send({ totalSubmissions: result });
+                // Fetch all assignments for the given class
+                const assignments = await assignmentCollection.find({ classId }).toArray();
+                const assignmentIds = assignments.map(assignment => assignment._id.toString());
+
+                // Count total submissions for those assignments
+                const totalSubmissions = await submissionCollection.countDocuments({
+                    assignmentId: { $in: assignmentIds },
+                });
+
+                res.send({ totalSubmissions });
             } catch (error) {
                 res.status(500).send({ message: 'Error fetching submissions', error });
             }
         });
+
 
         // Update class status -- admin page
         app.patch('/updateClassStatus/:id', async (req, res) => {
@@ -437,7 +450,7 @@ async function run() {
             const { transactionId, email, classId, className, price } = req.body;
 
             try {
-                // Store payment details in a new table or collection
+                // Store payment details in a new collection
                 const paymentInfo = {
                     transactionId,
                     email,
@@ -456,6 +469,12 @@ async function run() {
                 };
                 const enrollmentResult = await enrollmentCollection.insertOne(enrollmentInfo);
 
+                // Increment the enrollment count for the class
+                await classCollection.updateOne(
+                    { _id: new ObjectId(classId) },
+                    { $inc: { enrollmentCount: 1 } }  // Increment enrollmentCount by 1
+                );
+
                 res.send({
                     success: true,
                     message: "Payment and enrollment information saved successfully.",
@@ -466,6 +485,7 @@ async function run() {
                 res.status(500).send({ success: false, message: "Error saving data.", error });
             }
         });
+
 
 
         // get assignment
@@ -517,12 +537,25 @@ async function run() {
 
         // Teaching Evaluation Report create
         app.post('/submit-evaluation', async (req, res) => {
-            const { classId, studentEmail, description, rating } = req.body;
+            const { classId, studentEmail, studentName, studentImage, description, rating } = req.body;
 
             try {
+                // Fetch the class details to get the title
+                const classDetails = await classCollection.findOne({ _id: new ObjectId(classId) });
+
+                if (!classDetails) {
+                    return res.status(404).send({ message: 'Class not found.' });
+                }
+
+                const classTitle = classDetails.title;  // Assuming the class collection has a title field
+
+                // Save the evaluation with the class title
                 const result = await evaluationCollection.insertOne({
                     classId,
+                    classTitle,  // Save the class title along with the evaluation
                     studentEmail,
+                    studentName,
+                    studentImage,
                     description,
                     rating,
                     date: new Date(),
@@ -544,8 +577,73 @@ async function run() {
 
 
 
+        // home page get popular classes
+        app.get('/popular-classes', async (req, res) => {
+            try {
+                const popularClasses = await classCollection
+                    .find()
+                    .sort({ enrollmentCount: -1 }) // Sort classes by enrollmentCount in descending order
+                    .limit(6) // Limit to the top 6 classes
+                    .toArray();
+
+                res.send(popularClasses);
+            } catch (error) {
+                res.status(500).send({ message: 'Error fetching popular classes', error });
+            }
+        });
+
+        // get feedback
+        app.get('/get-feedback', async (req, res) => {
+            try {
+                const feedback = await evaluationCollection.find().toArray();
+
+                if (feedback.length > 0) {
+                    res.send({
+                        success: true,
+                        feedback,
+                    });
+                } else {
+                    res.send({
+                        success: false,
+                        message: 'No feedback found.',
+                    });
+                }
+            } catch (error) {
+                console.error(error);
+                res.status(500).send({ success: false, message: 'Error fetching feedback.' });
+            }
+        });
 
 
+        // Route to get the total users
+        app.get('/total-users', async (req, res) => {
+            try {
+                const totalUsers = await userCollection.countDocuments(); // Assuming a 'userCollection' for users
+                res.send({ totalUsers });
+            } catch (error) {
+                res.status(500).send({ message: 'Error fetching total users', error });
+            }
+        });
+
+        // Route to get the total classes
+        app.get('/total-classes', async (req, res) => {
+            try {
+                const totalClasses = await classCollection.countDocuments(); // Assuming a 'classCollection'
+                res.send({ totalClasses });
+            } catch (error) {
+                res.status(500).send({ message: 'Error fetching total classes', error });
+            }
+        });
+
+        // Route to get the total enrollments
+        app.get('/total-enrollments', async (req, res) => {
+            try {
+                const totalEnrollments = await enrollmentCollection.countDocuments(); // Assuming an 'enrollmentCollection'
+                res.send({ totalEnrollments });
+            } catch (error) {
+                res.status(500).send({ message: 'Error fetching total enrollments', error });
+            }
+        });
 
 
 
