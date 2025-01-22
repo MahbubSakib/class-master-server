@@ -37,7 +37,7 @@ async function run() {
         // middlewares
         // verify jwt
         const verifyToken = (req, res, next) => {
-            console.log('inside verifyToken', req.headers.authorization);
+            // console.log('inside verifyToken', req.headers.authorization);
             if (!req.headers.authorization) {
                 return res.status(401).send({ message: 'unauthorized access' });
             }
@@ -401,13 +401,13 @@ async function run() {
         // payment intent
         app.post('/create-payment-intent', async (req, res) => {
             try {
-                console.log('Raw price value:', req.body.price);
+                // console.log('Raw price value:', req.body.price);
                 const { price } = req.body;
                 if (!price || isNaN(price)) {
                     throw new Error('Invalid price value');
                 }
                 const amount = parseInt(price * 100);
-                console.log(amount, 'inside server');
+                // console.log(amount, 'inside server');
 
                 const paymentIntent = await stripe.paymentIntents.create({
                     amount: amount,
@@ -650,7 +650,7 @@ async function run() {
         // Connect the client to the server	(optional starting in v4.7)
         // await client.connect();
         // Send a ping to confirm a successful connection
-        await client.db("admin").command({ ping: 1 });
+        // await client.db("admin").command({ ping: 1 });
         console.log("Pinged your deployment. You successfully connected to MongoDB!");
     } finally {
         // Ensures that the client will close when you finish/error
