@@ -171,14 +171,20 @@ async function run() {
         // create an user
         app.post('/users', async (req, res) => {
             const user = req.body;
-            const query = { email: user.email }
-            const existingUser = await userCollection.findOne(query)
-            if (existingUser) {
-                return res.send({ message: 'user already exist', insertedId: null })
+
+            try {
+                const existingUser = await userCollection.findOne({ email: user.email });
+                if (existingUser) {
+                    return res.send({ existingUser: true });
+                }
+
+                const result = await userCollection.insertOne(user);
+                res.send({ insertedId: result.insertedId });
+            } catch (error) {
+                res.status(500).send({ message: 'Error saving user', error });
             }
-            const result = await userCollection.insertOne(user);
-            res.send(result);
-        })
+        });
+
 
         // teach on class master
         app.post('/teachOnClassMaster', async (req, res) => {
