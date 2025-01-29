@@ -1,6 +1,6 @@
 # **Class Master**
 
-Welcome to **Class Master**, the ultimate platform for learning and teaching. This website provides students and educators with an intuitive and interactive experience to enhance education.
+Welcome to **Class Master**, a platform for learning and teaching. This website provides students and educators with an intuitive and interactive experience to enhance education.
 
 ---
 
